@@ -2,7 +2,7 @@
   "force": false,
   "address": "0.0.0.0",
   "port": 5289,
-  "site_url": "https://alist-gp0s.onrender.com",
+  "site_url": "https://danvozhousalist.onrender.com",
   "cdn": "https://npm.elemecdn.com/alist-web@$version/dist",
   "jwt_secret": "random generated",
   "token_expires_in": 48,
