@@ -13,6 +13,7 @@ type Storage struct {
 	Remark          string    `json:"remark"`
 	Modified        time.Time `json:"modified"`
 	Disabled        bool      `json:"disabled"` // if disabled
+	EnableSign      bool      `json:"enable_sign"`
 	Sort
 	Proxy
 }
@@ -31,6 +32,10 @@ type Proxy struct {
 
 func (s *Storage) GetStorage() *Storage {
 	return s
+}
+
+func (s *Storage) SetStorage(storage Storage) {
+	*s = storage
 }
 
 func (s *Storage) SetStatus(status string) {

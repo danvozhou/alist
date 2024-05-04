@@ -1,24 +1,29 @@
 package bootstrap
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/alist-org/alist/v3/cmd/flags"
+	"github.com/alist-org/alist/v3/drivers/base"
 	"github.com/alist-org/alist/v3/internal/conf"
 	"github.com/alist-org/alist/v3/pkg/utils"
-	"github.com/caarlos0/env/v6"
+	"github.com/caarlos0/env/v9"
 	log "github.com/sirupsen/logrus"
 )
 
 func InitConfig() {
 	if flags.ForceBinDir {
-		ex, err := os.Executable()
-		if err != nil {
-			utils.Log.Fatal(err)
+		if !filepath.IsAbs(flags.DataDir) {
+			ex, err := os.Executable()
+			if err != nil {
+				utils.Log.Fatal(err)
+			}
+			exPath := filepath.Dir(ex)
+			flags.DataDir = filepath.Join(exPath, flags.DataDir)
 		}
-		exPath := filepath.Dir(ex)
-		flags.DataDir = filepath.Join(exPath, "data")
 	}
 	configPath := filepath.Join(flags.DataDir, "config.json")
 	log.Infof("reading config file: %s", configPath)
@@ -47,7 +52,7 @@ func InitConfig() {
 		if err != nil {
 			log.Fatalf("marshal config error: %+v", err)
 		}
-		err = os.WriteFile(configPath, confBody, 0777)
+		err = os.WriteFile(configPath, confBody, 0o777)
 		if err != nil {
 			log.Fatalf("update config struct error: %+v", err)
 		}
@@ -67,11 +72,13 @@ func InitConfig() {
 	if err != nil {
 		log.Errorln("failed delete temp file:", err)
 	}
-	err = os.MkdirAll(conf.Conf.TempDir, 0777)
+	err = os.MkdirAll(conf.Conf.TempDir, 0o777)
 	if err != nil {
 		log.Fatalf("create temp dir error: %+v", err)
 	}
 	log.Debugf("config: %+v", conf.Conf)
+	base.InitClient()
+	initURL()
 }
 
 func confFromEnv() {
@@ -80,9 +87,20 @@ func confFromEnv() {
 		prefix = ""
 	}
 	log.Infof("load config from env with prefix: %s", prefix)
-	if err := env.Parse(conf.Conf, env.Options{
+	if err := env.ParseWithOptions(conf.Conf, env.Options{
 		Prefix: prefix,
 	}); err != nil {
 		log.Fatalf("load config from env error: %+v", err)
 	}
+}
+
+func initURL() {
+	if !strings.Contains(conf.Conf.SiteURL, "://") {
+		conf.Conf.SiteURL = utils.FixAndCleanPath(conf.Conf.SiteURL)
+	}
+	u, err := url.Parse(conf.Conf.SiteURL)
+	if err != nil {
+		utils.Log.Fatalf("can't parse site_url: %+v", err)
+	}
+	conf.URL = u
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/alist-org/alist/v3/internal/driver"
 	"github.com/alist-org/alist/v3/internal/errs"
 	"github.com/alist-org/alist/v3/internal/model"
-	"github.com/alist-org/alist/v3/pkg/utils"
 	"github.com/jlaffaye/ftp"
 )
 
@@ -22,15 +21,10 @@ func (d *FTP) Config() driver.Config {
 }
 
 func (d *FTP) GetAddition() driver.Additional {
-	return d.Addition
+	return &d.Addition
 }
 
-func (d *FTP) Init(ctx context.Context, storage model.Storage) error {
-	d.Storage = storage
-	err := utils.Json.UnmarshalFromString(d.Storage.Addition, &d.Addition)
-	if err != nil {
-		return err
-	}
+func (d *FTP) Init(ctx context.Context) error {
 	return d.login()
 }
 
@@ -50,8 +44,7 @@ func (d *FTP) List(ctx context.Context, dir model.Obj, args model.ListArgs) ([]m
 		return nil, err
 	}
 	res := make([]model.Obj, 0)
-	for i, _ := range entries {
-		entry := entries[i]
+	for _, entry := range entries {
 		if entry.Name == "." || entry.Name == ".." {
 			continue
 		}
@@ -66,22 +59,16 @@ func (d *FTP) List(ctx context.Context, dir model.Obj, args model.ListArgs) ([]m
 	return res, nil
 }
 
-//func (d *FTP) Get(ctx context.Context, path string) (model.Obj, error) {
-//	// this is optional
-//	return nil, errs.NotImplement
-//}
-
 func (d *FTP) Link(ctx context.Context, file model.Obj, args model.LinkArgs) (*model.Link, error) {
 	if err := d.login(); err != nil {
 		return nil, err
 	}
-	resp, err := d.conn.Retr(file.GetPath())
-	if err != nil {
-		return nil, err
+
+	r := NewFileReader(d.conn, file.GetPath(), file.GetSize())
+	link := &model.Link{
+		MFile: r,
 	}
-	return &model.Link{
-		Data: resp,
-	}, nil
+	return link, nil
 }
 
 func (d *FTP) MakeDir(ctx context.Context, parentDir model.Obj, dirName string) error {
@@ -124,6 +111,7 @@ func (d *FTP) Put(ctx context.Context, dstDir model.Obj, stream model.FileStream
 	if err := d.login(); err != nil {
 		return err
 	}
+	// TODO: support cancel
 	return d.conn.Stor(stdpath.Join(dstDir.GetPath(), stream.GetName()), stream)
 }
 

@@ -1,7 +1,7 @@
 package db
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/alist-org/alist/v3/internal/conf"
 	"github.com/alist-org/alist/v3/internal/model"
@@ -26,4 +26,22 @@ func AutoMigrate(dst ...interface{}) error {
 		err = db.AutoMigrate(dst...)
 	}
 	return err
+}
+
+func GetDb() *gorm.DB {
+	return db
+}
+
+func Close() {
+	log.Info("closing db")
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Errorf("failed to get db: %s", err.Error())
+		return
+	}
+	err = sqlDB.Close()
+	if err != nil {
+		log.Errorf("failed to close db: %s", err.Error())
+		return
+	}
 }

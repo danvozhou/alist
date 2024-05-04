@@ -7,8 +7,9 @@ import (
 
 type Addition struct {
 	driver.RootID
-	Username string `json:"username" required:"true"`
-	Password string `json:"password" required:"true"`
+	Username         string `json:"username" required:"true"`
+	Password         string `json:"password" required:"true"`
+	DisableMediaLink bool   `json:"disable_media_link"`
 }
 
 var config = driver.Config{
@@ -17,10 +18,8 @@ var config = driver.Config{
 	DefaultRoot: "",
 }
 
-func New() driver.Driver {
-	return &PikPak{}
-}
-
 func init() {
-	op.RegisterDriver(config, New)
+	op.RegisterDriver(func() driver.Driver {
+		return &PikPak{}
+	})
 }

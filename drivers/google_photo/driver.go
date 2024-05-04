@@ -26,15 +26,10 @@ func (d *GooglePhoto) Config() driver.Config {
 }
 
 func (d *GooglePhoto) GetAddition() driver.Additional {
-	return d.Addition
+	return &d.Addition
 }
 
-func (d *GooglePhoto) Init(ctx context.Context, storage model.Storage) error {
-	d.Storage = storage
-	err := utils.Json.UnmarshalFromString(d.Storage.Addition, &d.Addition)
-	if err != nil {
-		return err
-	}
+func (d *GooglePhoto) Init(ctx context.Context) error {
 	return d.refreshToken()
 }
 
@@ -52,11 +47,6 @@ func (d *GooglePhoto) List(ctx context.Context, dir model.Obj, args model.ListAr
 	})
 }
 
-//func (d *GooglePhoto) Get(ctx context.Context, path string) (model.Obj, error) {
-//	// this is optional
-//	return nil, errs.NotImplement
-//}
-
 func (d *GooglePhoto) Link(ctx context.Context, file model.Obj, args model.LinkArgs) (*model.Link, error) {
 	f, err := d.getMedia(file.GetID())
 	if err != nil {
@@ -68,9 +58,33 @@ func (d *GooglePhoto) Link(ctx context.Context, file model.Obj, args model.LinkA
 			URL: f.BaseURL + "=d",
 		}, nil
 	} else if strings.Contains(f.MimeType, "video/") {
-		return &model.Link{
-			URL: f.BaseURL + "=dv",
-		}, nil
+		var width, height int
+
+		fmt.Sscanf(f.MediaMetadata.Width, "%d", &width)
+		fmt.Sscanf(f.MediaMetadata.Height, "%d", &height)
+
+		switch {
+		// 1080P
+		case width == 1920 && height == 1080:
+			return &model.Link{
+				URL: f.BaseURL + "=m37",
+			}, nil
+		// 720P
+		case width == 1280 && height == 720:
+			return &model.Link{
+				URL: f.BaseURL + "=m22",
+			}, nil
+		// 360P
+		case width == 640 && height == 360:
+			return &model.Link{
+				URL: f.BaseURL + "=m18",
+			}, nil
+		default:
+			return &model.Link{
+				URL: f.BaseURL + "=dv",
+			}, nil
+		}
+
 	}
 	return &model.Link{}, nil
 }
@@ -134,7 +148,7 @@ func (d *GooglePhoto) Put(ctx context.Context, dstDir model.Obj, stream model.Fi
 	}
 
 	resp, err := d.request(postUrl, http.MethodPost, func(req *resty.Request) {
-		req.SetBody(stream.GetReadCloser())
+		req.SetBody(stream).SetContext(ctx)
 	}, nil, postHeaders)
 
 	if err != nil {

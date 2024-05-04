@@ -7,20 +7,22 @@ import (
 
 type Addition struct {
 	driver.RootPath
-	Address     string `json:"url" required:"true"`
-	Password    string `json:"password"`
-	AccessToken string `json:"access_token"`
+	Address      string `json:"url" required:"true"`
+	MetaPassword string `json:"meta_password"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	Token        string `json:"token"`
 }
 
 var config = driver.Config{
 	Name:        "AList V3",
 	LocalSort:   true,
-	NoUpload:    true,
 	DefaultRoot: "/",
+	CheckStatus: true,
 }
 
 func init() {
-	op.RegisterDriver(config, func() driver.Driver {
+	op.RegisterDriver(func() driver.Driver {
 		return &AListV3{}
 	})
 }
